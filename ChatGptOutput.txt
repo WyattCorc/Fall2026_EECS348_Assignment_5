@@ -1,0 +1,106 @@
+Replace print module with:
+void print(ostream& out) const {
+    for (int r = 0; r < SIZE; r++) {
+        for (int c = 0; c < SIZE; c++) {
+            if (grid[r][c] == EMPTY)
+                out << '_';
+            else
+                out << grid[r][c];
+
+            if (c < SIZE - 1)
+                out << ' ';
+        }
+        out << '\n';
+    }
+}
+add:
+puzzle.print(cout);      // Print to terminal
+puzzle.print(outputFile); // Write to file
+Replace the solve and print method with
+void solveAndPrintAll(const SudokuPuzzle& original, ostream& out) {
+    solutionCount = 0;
+    SudokuPuzzle working = original;
+
+    // Only attempt to solve a puzzle with valid starting numbers.
+    if (working.givensAreValid()) {
+        search(working, out);
+    }
+
+    // Report whether solutions were found.
+    if (solutionCount == 0) {
+        out << "No solution found." << '\n';
+    } else {
+        out << "Solutions found: " << solutionCount << '\n';
+    }
+}
+Replace Search with:
+void search(SudokuPuzzle& puzzle, ostream& out) {
+    int row = 0, col = 0, candidateCount = 0;
+
+    // Find the empty cell with the fewest possible values.
+    if (!puzzle.findBestEmptyCell(row, col, candidateCount)) {
+        solutionCount++;
+
+        // Write the completed puzzle directly to the output file.
+        puzzle.print(out);
+        out << '\n';
+        return;
+    }
+
+    // Stop searching this path if no valid number can be placed.
+    if (candidateCount == 0)
+        return;
+
+    // Try each possible number and recursively continue.
+    for (int value = 1; value <= 9; value++) {
+        if (puzzle.isValidPlacement(row, col, value)) {
+            puzzle.set(row, col, value);
+
+            search(puzzle, out);
+
+            // Restore the empty cell before trying another value.
+            puzzle.set(row, col, SudokuPuzzle::EMPTY);
+        }
+    }
+}
+Major simplicity change replace the sodoku class with-
+class SudokuApp {
+public:
+    void run() {
+        // Process puzzle1.txt through puzzle5.txt.
+        for (int i = 1; i <= 5; i++) {
+            string inputName = "puzzle" + to_string(i) + ".txt";
+            string outputName = "solution" + to_string(i) + ".txt";
+
+            processPuzzle(inputName, outputName);
+        }
+    }
+
+private:
+    SudokuSolver solver;
+
+    // Load a puzzle and write its solutions to the matching file.
+    void processPuzzle(const string& inputName,
+                       const string& outputName) {
+        SudokuPuzzle puzzle;
+
+        // Validate the input before creating the output file.
+        if (!puzzle.loadFromFile(inputName)) {
+            cerr << "Error: could not read a valid 9x9 puzzle from "
+                 << inputName << '\n';
+            return;
+        }
+
+        // Create or overwrite the solution file.
+        ofstream outputFile(outputName.c_str());
+
+        if (!outputFile) {
+            cerr << "Error: could not open "
+                 << outputName << '\n';
+            return;
+        }
+
+        // Write all solutions to the file.
+        solver.solveAndPrintAll(puzzle, outputFile);
+    }
+};

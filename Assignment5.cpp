@@ -1,12 +1,12 @@
 /*
- * Program: EECS 348 Assignment 4 - Sudoku Solver
+ * Program: EECS 348 Assignment 5 - Sudoku Solver, modifications
  * What it does: Reads five Sudoku files and uses backtracking to find
- *               and print every solution. If there isn't one, it says so.
+ *               and outputs every solution to SolutionN.txt. If there isn't one, it says so.
  * Input: puzzle1.txt through puzzle5.txt (1-9 = filled, _ = empty)
- * Output: File name, starting puzzle, and all solutions or no solution.
- * Author: Parker Curl
- * Date: October 15, 2026
- * Collaborators: None (no student collaborators)
+ * Output: File name, starting puzzle, and all solutions as .txt files or no solution.
+ * Author: Wyatt Corcoran, Original Code from Parker Curl
+ * Date: October 29, 2026
+ * Collaborators: Wyatt Corcoran (Not sure if I am technically the author)
  * Code sources:
  *   - Claude (Anthropic): original three-class program, board checks,
  *     printing, recursive backtracking, and file-processing structure.
@@ -14,18 +14,18 @@
  *     with the fewest choices (MRV), and related search changes.
  *   - ChatGPT also helped rewrite and label these comments. Review them
  *     and edit the explanations to match your own understanding.
- * Compile on Cycle: g++ -std=c++11 -Wall -Wextra -o Assignment4.exe Assignment4.cpp
- * Run: ./Assignment4.exe
+ *   - Chatgpt, used for the second Round revisions,
+ *     primarily for implementing the .txt output module
+ * 
  */
 
 // Source: Claude for the original includes; ChatGPT added cctype.
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
+#include <iostream>//Wyatt: Manages i/o 
+#include <fstream> //Wyatt: Read & write from files
+#include <string> //Wyatt: Adds the string type into c++
 #include <cctype> // ChatGPT: needed for checking whitespace in puzzle files
 
-using namespace std;
+using namespace std;//Wyatt: used for standarized code syntax
 
 // Source: Claude 
 //original SudokuPuzzle class and basic board setup.
@@ -39,17 +39,19 @@ public:
     // Source: Claude  
     //start with a completely empty board.
     SudokuPuzzle() {
-        for (int r = 0; r < SIZE; r++)
-            for (int c = 0; c < SIZE; c++)
-                grid[r][c] = EMPTY;
+        for (int r = 0; r < SIZE; r++)//Iterates Rows to make an empty board
+            for (int c = 0; c < SIZE; c++)//Iterates Cols
+                grid[r][c] = EMPTY;//Appends EMPTY to each location
     }
 
     // Source: Claude's file-reading idea, changed by ChatGPT (correctness).
     // Claude skipped characters it didn't recognize. Now we only allow spaces/newlines, 1-9 and underscores
-    bool loadFromFile(const string& filename) {
-        ifstream in(filename.c_str());
-        if (!in) return false; // File didn't open
-
+    bool loadFromFile(const string& filename) {//Input filename
+        ifstream in(filename.c_str());//Re-written by Wyatt for better error handling
+        if (!in){ 
+            cerr << "Error: Unable to open " << filename << '\n'; //added error handling msg here
+            return false; //Fail run main
+        }
         // Source: ChatGPT 
         //read into a separate board first, so bad file data won't partly replace the puzzle we're using.
         SudokuPuzzle loaded;
@@ -68,18 +70,23 @@ public:
         return true;
     }
 
-    // Source: Claude 
+    // ReWritten by Wyatt to account for new output format.
     //print the board, using _ for blanks.
-    void print() const {
-        for (int r = 0; r < SIZE; r++) {
-            for (int c = 0; c < SIZE; c++) {
-                if (grid[r][c] == EMPTY) cout << '_';
-                else cout << grid[r][c];
-                if (c < SIZE - 1) cout << ' ';
+    void print(ostream& out) const { //takes the output stream and the output and formats it for the file
+        for (int r = 0; r < SIZE; r++){//Iterates through rows
+            for (int c = 0; c < SIZE; c++){//Iterates through cols
+                if (grid[r][c] == EMPTY)//If what it reads in the file is returned as empty
+                    out << "_";//Amends that spot to _
+                else
+                    out << grid[r][c];//Otherwise puts the number in that spot
+                if (c < SIZE-1)//Adds a space between outputs for readability
+                    out << ' ';//Appends a ' ' to the point between values
+                
+                }
+                out << '\n'; //Newline when iterating between rows
             }
-            cout << endl; // Next row
+            
         }
-    }
 
     // Source: Claude 
     //read or change one square on the board.
@@ -147,121 +154,121 @@ public:
 private:
     int grid[SIZE][SIZE]; // Source: Claude: stores the puzzle numbers
 };
-
 // Source: Claude 
 //original SudokuSolver class and backtracking idea.
 // Source: ChatGPT  
 //changed which empty cell gets chosen during the search.
 class SudokuSolver {
 public:
-    // Source: Claude
-    //keep a copy so we can still print the starting puzzle.
-    void solveAndPrintAll(const SudokuPuzzle& original) {
-        solutionCount = 0;
+   // Revised by: Wyatt
+    // Source: ChatGPT
+    // Solve the puzzle and write every solution to the output file.
+    void solveAndPrintAll(const SudokuPuzzle& original, ostream& out) {//Helper funct "runs" puzzles 1-5
+        solutionCount = 0;//zeroes out the solution count
         SudokuPuzzle working = original;
 
+        // Only attempt to solve a puzzle with valid starting numbers.
         if (working.givensAreValid()) {
-            search(working); // Only search if the starting numbers are valid
+            search(working, out);
         }
 
+        // Report whether solutions were found.
         if (solutionCount == 0) {
-            cout << "No solution found" << endl;
-        } else if (solutionCount > 1) {
-            cout << "Total solutions found: " << solutionCount << endl;
-        }
+            out << "No solution found." << '\n';//returns only this to the file if no solutions
+        } else {
+            out << "Solutions found: " << solutionCount << '\n';//Prints the solutions after
     }
+    
+}
 
 private:
     // Source: ChatGPT
     //larger unsigned number than Claude's original int.
     unsigned long long solutionCount;
 
-    // Source: Claude's recursive backtracking, updated by ChatGPT for MRV.
-    // Pick a blank, try 1-9, keep going, then undo the number and try again.
-    void search(SudokuPuzzle& puzzle) {
-        // Source: ChatGPT - candidateCount is how many numbers fit in the blank.
-        int row = 0, col = 0, candidateCount = 0;
+ // Revised by: Wyatt
+// Source: Claude's backtracking, revised by ChatGPT
+// Find all solutions using the Minimum Remaining Values method.
+void search(SudokuPuzzle& puzzle, ostream& out) {//Updated the method to do ostream file I/O
+    int row = 0, col = 0, candidateCount = 0;//Inits vals here at 0 for each puzzle
 
-        // Source: ChatGPT
-        // use the MRV method instead of the first blank.
-        //If no blank is found,the puzzle is complete, so print it.
-        if (!puzzle.findBestEmptyCell(row, col, candidateCount)) {
-            solutionCount++;
-            cout << "Solution " << solutionCount << ":" << endl;
-            puzzle.print();
-            cout << endl;
-            return;
-        }
+    // Find the empty cell with the fewest possible values.
+    if (!puzzle.findBestEmptyCell(row, col, candidateCount)) {//If there is no new empty cell:
+        solutionCount++; //Add a solution
 
-        // Source: ChatGPT
-        //if a blank has zero choices, stop this path.
-        if (candidateCount == 0) return;
+        // Write the completed puzzle directly to the output file.
+        puzzle.print(out); //uses the print member func of puzzle
+        out << '\n';//New lines the end
+        return;
+    }
 
-        // Source: Claude
-        //try each number, go deeper, then backtrack.
-        for (int value = 1; value <= 9; value++) {
-            if (puzzle.isValidPlacement(row, col, value)) {
-                puzzle.set(row, col, value); //Try this number
-                search(puzzle); // Work on the next blank
-                puzzle.set(row, col, SudokuPuzzle::EMPTY); //Undo and try again
-            }
+    // Stop searching this path if no valid number can be placed.
+    if (candidateCount == 0)
+        return;
+
+    // Try each possible number and recursively continue.
+    for (int value = 1; value <= 9; value++) {
+        if (puzzle.isValidPlacement(row, col, value)) {//Check call
+            puzzle.set(row, col, value); //Set call
+
+            search(puzzle, out);//Recures here with the puzzle data
+
+            // Sets previous val to EMPTY to properly backtrack
+            puzzle.set(row, col, SudokuPuzzle::EMPTY);
         }
     }
+}
 };
-
-// Source: Claude 
-// the original app class. It runs all five puzzle files.
 class SudokuApp {
 public:
-    // Source: Claude
-    //list the five files we're supposed to solve.
-    SudokuApp() {
-        files.push_back("puzzle1.txt");
-        files.push_back("puzzle2.txt");
-        files.push_back("puzzle3.txt");
-        files.push_back("puzzle4.txt");
-        files.push_back("puzzle5.txt");
-    }
-
-    // Source: Claude 
-    //go through the five files one at a time.
     void run() {
-        for (size_t i = 0; i < files.size(); i++) {
-            processPuzzle(files[i]);
+        // Process puzzle1.txt through puzzle5.txt.
+        for (int i = 1; i <= 5; i++) {
+            string inputName = "puzzle" + to_string(i) + ".txt";
+            string outputName = "solution" + to_string(i) + ".txt";
+
+            processPuzzle(inputName, outputName);
         }
     }
 
+// Source: Claude's original SudokuApp class
+// Revised by: Wyatt
+// Source: ChatGPT
+// Process five puzzle files and save their solutions separately.
 private:
-    vector<string> files; // Source: Claude: names of the input files
-    SudokuSolver solver;  // Source: Claude: object that solves the puzzle
+    SudokuSolver solver;
 
-    // Source: Claude
-    //load, print, and solve each puzzle.
-    void processPuzzle(const string& filename) {
-        cout << "==============================" << endl;
-        cout << "File: " << filename << endl;
-        cout << "==============================" << endl;
-
+    // Load a puzzle and write its solutions to the matching file.
+    void processPuzzle(const string& inputName,
+                       const string& outputName) {
         SudokuPuzzle puzzle;
-        if (!puzzle.loadFromFile(filename)) {
-            cout << "Error: could not read a valid 9x9 puzzle from "
-                 << filename << endl << endl;
+
+        // Validate the input before creating the output file.
+        if (!puzzle.loadFromFile(inputName)) {
+            cerr << "Error: could not read a valid 9x9 puzzle from "
+                 << inputName << '\n';
             return;
         }
 
-        cout << "Original puzzle:" << endl;
-        puzzle.print();
-        cout << endl;
+        // Create or overwrite the solution file.
+        ofstream outputFile(outputName.c_str());
 
-        solver.solveAndPrintAll(puzzle);
-        cout << endl;
+        //Error handling for not being able to find or open output
+        if (!outputFile) {
+            cerr << "Error: could not open "
+                 << outputName << '\n';
+            return;
+        }
+
+        // Write all solutions to the file.
+        solver.solveAndPrintAll(puzzle, outputFile);
     }
 };
 
 // Source: Claude 
 //make the app object and start it.
 int main() {
-    SudokuApp app;
-    app.run();
-    return 0;
+    SudokuApp app;//Inits SodokuApp class
+    app.run();//Runs the previous class
+    return 0;//Success run condition.
 }
