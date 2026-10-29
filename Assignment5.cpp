@@ -16,7 +16,8 @@
  *     and edit the explanations to match your own understanding.
  *   - Chatgpt, used for the second Round revisions,
  *     primarily for implementing the .txt output module
- *  -Build with g++ -O3 -std=c++11 Assignment5.cpp -o Assignment5.exe
+ *  -NOTE FOR RUNNING
+ *  -Please Build on CYCLE servers with: g++ -O3 -std=c++11 Assignment5.cpp -o Assignment5.exe
  *  -Run with ./Assignment5.exe
  */
 
