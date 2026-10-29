@@ -1,0 +1,93 @@
+Replace print with printtostream:
+void printToStream(ostream& out) const {
+        for (int r = 0; r < SIZE; r++) {
+            for (int c = 0; c < SIZE; c++) {
+                if (grid[r][c] == EMPTY) out << '_';
+                else out << grid[r][c];
+                if (c < SIZE - 1) out << ' ';
+            }
+            out << endl;
+        }
+    }
+Modify sodoku solver with:
+class SudokuSolver {
+public:
+    // Updated to write solutions directly to the solutionN.txt file stream
+    // Source: Modified from original Claude/ChatGPT solver
+    void solveAndWriteToFile(const SudokuPuzzle& original, const string& outFilename) {
+        solutionCount = 0;
+        SudokuPuzzle working = original;
+        ofstream outFile(outFilename.c_str());
+
+        if (working.givensAreValid()) {
+            search(working, outFile);
+        }
+
+        if (solutionCount == 0) {
+            outFile << "No solution found." << endl; // Required exact string with period[cite: 2]
+        } else {
+            outFile << "Solutions found: " << solutionCount << endl; // Required exact format[cite: 2]
+        }
+    }
+
+private:
+    unsigned long long solutionCount;
+
+    // Updated search method to output solutions to file stream
+    void search(SudokuPuzzle& puzzle, ofstream& outFile) {
+        int row = 0, col = 0, candidateCount = 0;
+
+        if (!puzzle.findBestEmptyCell(row, col, candidateCount)) {
+            solutionCount++;
+            puzzle.printToStream(outFile);
+            outFile << endl; // Blank line separation between multiple solutions if any
+            return;
+        }
+
+        if (candidateCount == 0) return;
+
+        for (int value = 1; value <= 9; value++) {
+            if (puzzle.isValidPlacement(row, col, value)) {
+                puzzle.set(row, col, value);
+                search(puzzle, outFile);
+                puzzle.set(row, col, SudokuPuzzle::EMPTY);
+            }
+        }
+    }
+};
+Replace sodoku app with:
+class SudokuApp {
+public:
+    SudokuApp() {
+        files.push_back("puzzle1.txt");
+        files.push_back("puzzle2.txt");
+        files.push_back("puzzle3.txt");
+        files.push_back("puzzle4.txt");
+        files.push_back("puzzle5.txt");
+    }
+
+    // Updated to generate solutionN.txt names dynamically
+    void run() {
+        for (size_t i = 0; i < files.size(); i++) {
+            string outName = "solution" + to_string(i + 1) + ".txt";
+            processPuzzle(files[i], outName);
+        }
+    }
+
+private:
+    vector<string> files;
+    SudokuSolver solver;
+
+    // Streamlined processPuzzle to handle file IO directly without console clutter
+    void processPuzzle(const string& inFilename, const string& outFilename) {
+        SudokuPuzzle puzzle;
+        ofstream outFile(outFilename.c_str());
+        
+        if (!puzzle.loadFromFile(inFilename)) {
+            outFile << "No solution found." << endl; //[cite: 2]
+            return;
+        }
+
+        solver.solveAndWriteToFile(puzzle, outFilename);
+    }
+};
