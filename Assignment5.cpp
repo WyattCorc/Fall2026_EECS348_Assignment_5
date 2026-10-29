@@ -16,7 +16,8 @@
  *     and edit the explanations to match your own understanding.
  *   - Chatgpt, used for the second Round revisions,
  *     primarily for implementing the .txt output module
- * 
+ *  -Build with g++ -O3 -std=c++11 Assignment5.cpp -o Assignment5.exe
+ *  -Run with ./Assignment5.exe
  */
 
 // Source: Claude for the original includes; ChatGPT added cctype.
@@ -225,7 +226,7 @@ public:
         // Process puzzle1.txt through puzzle5.txt.
         for (int i = 1; i <= 5; i++) {
             string inputName = "puzzle" + to_string(i) + ".txt";
-            string outputName = "solution" + to_string(i) + ".txt";
+            string outputName = "Solution" + to_string(i) + ".txt";
 
             processPuzzle(inputName, outputName);
         }
